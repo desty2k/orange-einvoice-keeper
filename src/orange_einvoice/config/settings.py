@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     data_dir: Path = Path("/data")
     timezone: str = "Europe/Warsaw"
     login_advance_days: Annotated[int, Field(ge=0, le=60)] = 7
+    fallback_login_interval_days: Annotated[int, Field(ge=1, le=90)] = 25
     retry_delay_hours: Annotated[int, Field(ge=1, le=168)] = 6
     otp_retry_delay_hours: Annotated[int, Field(ge=1, le=720)] = 24
     invalid_credentials_retry_delay_hours: Annotated[int, Field(ge=24, le=8760)] = 168
@@ -32,7 +33,7 @@ class Settings(BaseSettings):
     schedule_window_start_hour: Annotated[int, Field(ge=0, le=23)] = 3
     schedule_window_hours: Annotated[int, Field(ge=1, le=12)] = 3
     max_concurrency: Annotated[int, Field(ge=1, le=1)] = 1
-    login_url: str = "https://www.orange.pl/zaloguj"
+    login_url: str = "https://www.orange.pl/twojekonto/"
     webhook_url: str | None = None
     failure_artifact_retention: Annotated[int, Field(ge=0, le=100)] = 5
     save_failure_html: bool = False

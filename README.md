@@ -38,7 +38,7 @@ Settings are parsed once from `ORANGE_*` environment variables with `pydantic-se
 ORANGE_ACCOUNTS=[{"name":"home","email":"me@example.com","password":"secret"},{"name":"mobile","email":"other@example.com","password":"secret2","enabled":true}]
 ```
 
-Key settings: `ORANGE_LOGIN_ADVANCE_DAYS` (default `7`), `ORANGE_RETRY_DELAY_HOURS` (`6`), `ORANGE_OTP_RETRY_DELAY_HOURS` (`24`), `ORANGE_INVALID_CREDENTIALS_RETRY_DELAY_HOURS` (`168`), `ORANGE_TIMEZONE`, `ORANGE_BROWSER_HEADLESS`, `ORANGE_WEBHOOK_URL`, `ORANGE_FAILURE_ARTIFACT_RETENTION` (`5`) and `ORANGE_SAVE_FAILURE_HTML` (default false; HTML may contain personal data).
+Key settings: `ORANGE_LOGIN_ADVANCE_DAYS` (default `7`), `ORANGE_FALLBACK_LOGIN_INTERVAL_DAYS` (`25`, used only when Orange does not expose a deadline), `ORANGE_RETRY_DELAY_HOURS` (`6`), `ORANGE_OTP_RETRY_DELAY_HOURS` (`24`), `ORANGE_INVALID_CREDENTIALS_RETRY_DELAY_HOURS` (`168`), `ORANGE_TIMEZONE`, `ORANGE_BROWSER_HEADLESS`, `ORANGE_WEBHOOK_URL`, `ORANGE_FAILURE_ARTIFACT_RETENTION` (`5`) and `ORANGE_SAVE_FAILURE_HTML` (default false; HTML may contain personal data).
 
 A successful result is scheduled at the Orange deadline minus the advance days, inside a deterministic per-account 03:00–06:00 local-time window. Unknown deadlines use normal retry scheduling. Temporary errors back off from 6 h to a capped 24 h; OTP and invalid credentials use deliberate slower schedules.
 

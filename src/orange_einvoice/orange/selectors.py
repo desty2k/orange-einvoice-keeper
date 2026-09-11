@@ -4,7 +4,12 @@ Verify these against the current Orange portal before first production use.  Acc
 roles and labels are preferred; fallback CSS selectors prevent DOM details leaking elsewhere.
 """
 
-EMAIL_INPUT = 'input[type="email"]'
+# Observed on 2026-09-11: Orange first asks for an email address or phone number.
+# It is intentionally a text input, not input[type=email].
+IDENTIFIER_INPUT = (
+    'input[type="email"], input[placeholder*="e-mail" i], '
+    'input[placeholder*="telefon" i]'
+)
 PASSWORD_INPUT = 'input[type="password"]'
 SUBMIT_BUTTON = 'button[type="submit"]'
 OTP_INPUT = 'input[autocomplete="one-time-code"], input[name*="otp" i], input[name*="code" i]'

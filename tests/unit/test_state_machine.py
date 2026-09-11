@@ -46,3 +46,11 @@ def test_temporary_errors_backoff_and_cap() -> None:
     assert first.next_attempt_at == now + timedelta(hours=6)
     assert second.next_attempt_at == now + timedelta(hours=12)
     assert fourth.next_attempt_at == now + timedelta(hours=24)
+
+
+def test_success_without_orange_deadline_uses_monthly_fallback_not_retry_delay() -> None:
+    settings = make_settings()
+    now = datetime(2026, 9, 1, tzinfo=UTC)
+    result = transition(make_state(), LoginResult(LoginStatus.SUCCESS), settings, now)
+    assert result.status is AccountStatus.SUCCESS
+    assert result.next_attempt_at == now + timedelta(days=25)

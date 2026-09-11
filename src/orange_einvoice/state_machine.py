@@ -31,9 +31,9 @@ def transition(state: AccountState, result: LoginResult, settings: Settings, now
 
 
 def schedule_for_deadline(deadline: date | None, account_name: str, settings: Settings, now: datetime) -> datetime:
-    """Compute deterministic local-window schedule, falling back to normal retry for unknown dates."""
+    """Compute a deterministic deadline schedule or a conservative success fallback."""
     if deadline is None:
-        return now + timedelta(hours=settings.retry_delay_hours)
+        return now + timedelta(days=settings.fallback_login_interval_days)
     zone = ZoneInfo(settings.timezone)
     target = deadline - timedelta(days=settings.login_advance_days)
     seed = hashlib.sha256(account_name.encode()).digest()
