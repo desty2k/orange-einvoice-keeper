@@ -40,9 +40,23 @@ class OrangeClient:
         try:
             if not otp:
                 return LoginResult(LoginStatus.OTP_REQUIRED, detail="OTP required")
-            field = page.locator(selectors.OTP_INPUT).first
-            await field.wait_for(state="visible")
-            await field.fill(otp)
+            fields = page.locator(selectors.OTP_INPUT)
+            count = await fields.count()
+            if count == 0:
+                return LoginResult(LoginStatus.UNEXPECTED_PAGE, detail="OTP input was not found")
+            if count == 1:
+                await fields.first.wait_for(state="visible")
+                await fields.first.fill(otp)
+            elif count == len(otp):
+                for index, character in enumerate(otp):
+                    field = fields.nth(index)
+                    await field.wait_for(state="visible")
+                    await field.fill(character)
+            else:
+                return LoginResult(
+                    LoginStatus.UNEXPECTED_PAGE,
+                    detail=f"unsupported OTP input layout ({count} fields)",
+                )
             await page.locator(selectors.SUBMIT_BUTTON).first.click()
             return await self._wait_for_otp_resolution(page)
         except PlaywrightTimeoutError:
@@ -82,6 +96,8 @@ class OrangeClient:
 
     async def _classify(self, page: Page) -> LoginResult:
         text = await page.locator("body").inner_text()
-        status = classify_page(text)
+        otp_fields = page.locator(selectors.OTP_INPUT)
+        has_otp_input = await otp_fields.count() > 0 and await otp_fields.first.is_visible()
+        status = classify_page(text, has_otp_input=has_otp_input)
         deadline = parse_next_required_login(text) if status is LoginStatus.SUCCESS else None
         return LoginResult(status, deadline)

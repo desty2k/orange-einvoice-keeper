@@ -14,3 +14,15 @@ def test_parses_deadline_near_supported_marker() -> None:
 
 def test_ignores_dates_without_deadline_context() -> None:
     assert parse_next_required_login("Dzisiaj jest 08.10.2026") is None
+
+
+def test_classifies_polish_verification_prompt_as_otp() -> None:
+    assert classify_page("Wpisz kod weryfikacyjny wysłany SMS-em") is LoginStatus.OTP_REQUIRED
+
+
+def test_visible_otp_control_overrides_unknown_text() -> None:
+    assert classify_page("Kontynuuj", has_otp_input=True) is LoginStatus.OTP_REQUIRED
+
+
+def test_classifies_observed_orange_otp_label_as_otp() -> None:
+    assert classify_page("Wpisz Kod z SMS-a, aby kontynuować") is LoginStatus.OTP_REQUIRED

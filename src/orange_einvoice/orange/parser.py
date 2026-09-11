@@ -14,9 +14,9 @@ from orange_einvoice.orange.selectors import (
 _DATE_PATTERN = re.compile(r"\b(\d{1,2})[.\-/](\d{1,2})[.\-/](\d{4})\b")
 
 
-def classify_page(text: str) -> LoginStatus:
+def classify_page(text: str, *, has_otp_input: bool = False) -> LoginStatus:
     normalized = text.casefold()
-    if any(marker in normalized for marker in OTP_MARKERS):
+    if has_otp_input or any(marker in normalized for marker in OTP_MARKERS):
         return LoginStatus.OTP_REQUIRED
     if any(marker in normalized for marker in INVALID_CREDENTIAL_MARKERS):
         return LoginStatus.INVALID_CREDENTIALS
