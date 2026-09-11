@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from collections.abc import Awaitable, Callable
 
 from playwright.async_api import Error as PlaywrightError
 from playwright.async_api import Page
@@ -127,7 +128,18 @@ class OrangeClient:
             terminal={LoginStatus.SUCCESS, LoginStatus.INVALID_CREDENTIALS},
             completion_event="orange_otp_resolution_complete",
             transition_event="orange_otp_transition_dom_unavailable",
+            intermediate_action=self._approve_trusted_device,
         )
+
+    async def _approve_trusted_device(self, page: Page) -> bool:
+        """Accept Orange's primary trusted-device option when it follows a valid OTP."""
+        button = page.get_by_role("button", name=selectors.TRUST_DEVICE_BUTTON, exact=True)
+        if await button.count() == 0 or not await button.first.is_visible():
+            return False
+        logger.info("orange_trusted_device_option_detected")
+        await button.first.click()
+        logger.info("orange_trusted_device_option_selected")
+        return True
 
     async def _wait_for_resolution(
         self,
@@ -136,6 +148,7 @@ class OrangeClient:
         terminal: set[LoginStatus],
         completion_event: str,
         transition_event: str,
+        intermediate_action: Callable[[Page], Awaitable[bool]] | None = None,
     ) -> LoginResult:
         """Poll navigation safely; short DOM-read timeouts are normal during transitions."""
         loop = asyncio.get_running_loop()
@@ -145,6 +158,9 @@ class OrangeClient:
         transition_logged = False
 
         while loop.time() < deadline:
+            if intermediate_action is not None and await intermediate_action(page):
+                await page.wait_for_timeout(250)
+                continue
             remaining_ms = max(1, round((deadline - loop.time()) * 1000))
             try:
                 result = await self._classify(page, timeout_ms=min(1_000, remaining_ms))

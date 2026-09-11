@@ -43,3 +43,6 @@ OTP_MARKERS = (
 INVALID_CREDENTIAL_MARKERS = ("nieprawidłowe", "invalid credentials", "incorrect password")
 DASHBOARD_MARKERS = ("wyloguj", "moje konto", "dashboard")
 NEXT_LOGIN_MARKERS = ("następne logowanie", "next login", "zaloguj się do")
+
+# Exact visible primary action on Orange's post-OTP trusted-device page.
+TRUST_DEVICE_BUTTON = "Zaloguj i dodaj do zaufanych"

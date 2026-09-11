@@ -24,6 +24,9 @@ class SequencedClient(OrangeClient):
         super().__init__(settings)
         self.results = iter(results)
 
+    async def _approve_trusted_device(self, page: FakePage) -> bool:
+        return False
+
     async def _classify(
         self, page: FakePage, *, timeout_ms: int | None = None
     ) -> LoginResult:
@@ -77,4 +80,25 @@ async def test_otp_transition_retries_short_dom_read_timeout_before_success() ->
     result = await client._wait_for_otp_resolution(page)  # noqa: SLF001
 
     assert result.status is LoginStatus.SUCCESS
+    assert page.waits == [250]
+
+
+class TrustedDeviceClient(SequencedClient):
+    def __init__(self, results: list[LoginResult | Exception]) -> None:
+        super().__init__(results)
+        self.trusted_device_checks = 0
+
+    async def _approve_trusted_device(self, page: FakePage) -> bool:
+        self.trusted_device_checks += 1
+        return self.trusted_device_checks == 1
+
+
+async def test_otp_transition_selects_trusted_device_before_success() -> None:
+    client = TrustedDeviceClient([LoginResult(LoginStatus.SUCCESS)])
+    page = FakePage()
+
+    result = await client._wait_for_otp_resolution(page)  # noqa: SLF001
+
+    assert result.status is LoginStatus.SUCCESS
+    assert client.trusted_device_checks == 2
     assert page.waits == [250]
