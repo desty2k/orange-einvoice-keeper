@@ -81,15 +81,30 @@ class OrangeClient:
             if await password.is_visible():
                 await password.fill(account.password.get_secret_value())
                 await page.locator(selectors.SUBMIT_BUTTON).first.click()
-                return await self._wait_for_otp_resolution(page)
+                return await self._wait_for_login_resolution(page)
             await page.wait_for_timeout(250)
         return LoginResult(LoginStatus.TEMPORARY_FAILURE, detail="password stage did not appear")
 
-    async def _wait_for_otp_resolution(self, page: Page) -> LoginResult:
-        """Allow Orange to process a submission instead of assuming a one-second response."""
+    async def _wait_for_login_resolution(self, page: Page) -> LoginResult:
+        """Wait through Orange's intermediary page after password submission."""
         deadline = asyncio.get_running_loop().time() + self.settings.browser_timeout_ms / 1000
         result = await self._classify(page)
-        while result.status is LoginStatus.OTP_REQUIRED and asyncio.get_running_loop().time() < deadline:
+        terminal = {
+            LoginStatus.OTP_REQUIRED,
+            LoginStatus.SUCCESS,
+            LoginStatus.INVALID_CREDENTIALS,
+        }
+        while result.status not in terminal and asyncio.get_running_loop().time() < deadline:
+            await page.wait_for_timeout(250)
+            result = await self._classify(page)
+        return result
+
+    async def _wait_for_otp_resolution(self, page: Page) -> LoginResult:
+        """Wait through OTP and intermediary screens for a final authentication result."""
+        deadline = asyncio.get_running_loop().time() + self.settings.browser_timeout_ms / 1000
+        result = await self._classify(page)
+        terminal = {LoginStatus.SUCCESS, LoginStatus.INVALID_CREDENTIALS}
+        while result.status not in terminal and asyncio.get_running_loop().time() < deadline:
             await page.wait_for_timeout(250)
             result = await self._classify(page)
         return result
