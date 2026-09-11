@@ -109,46 +109,74 @@ class OrangeClient:
 
     async def _wait_for_login_resolution(self, page: Page) -> LoginResult:
         """Wait through Orange's intermediary page after password submission."""
-        started = asyncio.get_running_loop().time()
-        deadline = started + self.settings.browser_timeout_ms / 1000
-        result = await self._classify(page)
-        terminal = {
-            LoginStatus.OTP_REQUIRED,
-            LoginStatus.SUCCESS,
-            LoginStatus.INVALID_CREDENTIALS,
-        }
-        while result.status not in terminal and asyncio.get_running_loop().time() < deadline:
-            await page.wait_for_timeout(250)
-            result = await self._classify(page)
-        logger.info(
-            "orange_password_resolution_complete",
-            extra={
-                "outcome": result.status.value,
-                "waited_ms": round((asyncio.get_running_loop().time() - started) * 1000),
+        return await self._wait_for_resolution(
+            page,
+            terminal={
+                LoginStatus.OTP_REQUIRED,
+                LoginStatus.SUCCESS,
+                LoginStatus.INVALID_CREDENTIALS,
             },
+            completion_event="orange_password_resolution_complete",
+            transition_event="orange_password_transition_dom_unavailable",
         )
-        return result
 
     async def _wait_for_otp_resolution(self, page: Page) -> LoginResult:
         """Wait through OTP and intermediary screens for a final authentication result."""
-        started = asyncio.get_running_loop().time()
+        return await self._wait_for_resolution(
+            page,
+            terminal={LoginStatus.SUCCESS, LoginStatus.INVALID_CREDENTIALS},
+            completion_event="orange_otp_resolution_complete",
+            transition_event="orange_otp_transition_dom_unavailable",
+        )
+
+    async def _wait_for_resolution(
+        self,
+        page: Page,
+        *,
+        terminal: set[LoginStatus],
+        completion_event: str,
+        transition_event: str,
+    ) -> LoginResult:
+        """Poll navigation safely; short DOM-read timeouts are normal during transitions."""
+        loop = asyncio.get_running_loop()
+        started = loop.time()
         deadline = started + self.settings.browser_timeout_ms / 1000
-        result = await self._classify(page)
-        terminal = {LoginStatus.SUCCESS, LoginStatus.INVALID_CREDENTIALS}
-        while result.status not in terminal and asyncio.get_running_loop().time() < deadline:
+        last_result: LoginResult | None = None
+        transition_logged = False
+
+        while loop.time() < deadline:
+            remaining_ms = max(1, round((deadline - loop.time()) * 1000))
+            try:
+                result = await self._classify(page, timeout_ms=min(1_000, remaining_ms))
+                last_result = result
+                if result.status in terminal:
+                    self._log_resolution(completion_event, result, started)
+                    return result
+            except PlaywrightTimeoutError:
+                if not transition_logged:
+                    logger.info(transition_event)
+                    transition_logged = True
             await page.wait_for_timeout(250)
-            result = await self._classify(page)
+
+        result = last_result or LoginResult(
+            LoginStatus.TEMPORARY_FAILURE,
+            detail="Orange post-submit page did not settle",
+        )
+        self._log_resolution(completion_event, result, started)
+        return result
+
+    @staticmethod
+    def _log_resolution(event: str, result: LoginResult, started: float) -> None:
         logger.info(
-            "orange_otp_resolution_complete",
+            event,
             extra={
                 "outcome": result.status.value,
                 "waited_ms": round((asyncio.get_running_loop().time() - started) * 1000),
             },
         )
-        return result
 
-    async def _classify(self, page: Page) -> LoginResult:
-        text = await page.locator("body").inner_text()
+    async def _classify(self, page: Page, *, timeout_ms: int | None = None) -> LoginResult:
+        text = await page.locator("body").inner_text(timeout=timeout_ms)
         otp_fields = page.locator(selectors.OTP_INPUT)
         has_otp_input = await otp_fields.count() > 0 and await otp_fields.first.is_visible()
         status = classify_page(text, has_otp_input=has_otp_input)

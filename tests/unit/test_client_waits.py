@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from playwright.async_api import TimeoutError as PlaywrightTimeoutError
+
 from orange_einvoice.config import AccountSettings, Settings
 from orange_einvoice.models import LoginResult, LoginStatus
 from orange_einvoice.orange.client import OrangeClient
@@ -14,7 +16,7 @@ class FakePage:
 
 
 class SequencedClient(OrangeClient):
-    def __init__(self, results: list[LoginResult]) -> None:
+    def __init__(self, results: list[LoginResult | Exception]) -> None:
         settings = Settings(
             accounts=[AccountSettings(name="home", email="home@example.com", password="secret")],
             browser_timeout_ms=1_000,
@@ -22,8 +24,13 @@ class SequencedClient(OrangeClient):
         super().__init__(settings)
         self.results = iter(results)
 
-    async def _classify(self, page: FakePage) -> LoginResult:
-        return next(self.results)
+    async def _classify(
+        self, page: FakePage, *, timeout_ms: int | None = None
+    ) -> LoginResult:
+        item = next(self.results)
+        if isinstance(item, Exception):
+            raise item
+        return item
 
 
 async def test_password_transition_waits_for_otp_after_intermediate_pages() -> None:
@@ -56,3 +63,18 @@ async def test_otp_transition_waits_through_intermediate_page_for_success() -> N
 
     assert result.status is LoginStatus.SUCCESS
     assert page.waits == [250, 250]
+
+
+async def test_otp_transition_retries_short_dom_read_timeout_before_success() -> None:
+    client = SequencedClient(
+        [
+            PlaywrightTimeoutError("body not ready"),
+            LoginResult(LoginStatus.SUCCESS),
+        ]
+    )
+    page = FakePage()
+
+    result = await client._wait_for_otp_resolution(page)  # noqa: SLF001
+
+    assert result.status is LoginStatus.SUCCESS
+    assert page.waits == [250]
