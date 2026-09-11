@@ -1,6 +1,7 @@
 services:
   orange-einvoice:
-    image: ghcr.io/desty2k/orange-einvoice-keeper:latest
+    build: .
+    image: orange-einvoice-keeper:local
     restart: unless-stopped
     env_file: .env
     volumes:

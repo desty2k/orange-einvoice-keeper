@@ -6,11 +6,21 @@ A small Docker service that keeps one or more Orange portal profiles alive by sc
 
 ## Quick start
 
+The default `compose.yaml` runs the latest public GHCR image. Copy it with `.env.example` (or clone the repository), then configure your local credentials:
+
 ```bash
 cp .env.example .env
 # Edit ORANGE_ACCOUNTS; .env is gitignored and passwords are never written to SQLite.
-docker compose up -d --build
+docker compose pull
+docker compose up -d
 docker compose exec orange-einvoice orange-einvoice status
+```
+
+To build and run your local checkout instead, use the developer configuration explicitly:
+
+```bash
+docker compose -f compose.local.yaml up -d --build
+docker compose -f compose.local.yaml exec orange-einvoice orange-einvoice status
 ```
 
 Persistent data lives only in the `orange-data` volume:
@@ -70,4 +80,4 @@ The tests cover parsing, configuration, durable reconciliation, scheduling, and 
 
 ## Container releases
 
-GitHub Actions publishes `ghcr.io/desty2k/orange-einvoice-keeper` from `main` when commits since the latest `vX.Y.Z` tag follow Conventional Commits: `feat` creates a minor release, `fix` or `perf` a patch release, and `type!` or `BREAKING CHANGE:` a major release. Each release publishes immutable `vX.Y.Z` plus `X.Y`, `X`, and `latest` image tags, then creates the matching immutable Git tag. Commits without a release signal do not publish an image.
+GitHub Actions publishes `ghcr.io/desty2k/orange-einvoice-keeper` from `main` when commits since the latest `vX.Y.Z` tag follow Conventional Commits: `feat` creates a minor release, `fix` or `perf` a patch release, and `type!` or `BREAKING CHANGE:` a major release. Each release publishes immutable `vX.Y.Z` plus `X.Y`, `X`, and `latest` image tags, then creates the matching immutable Git tag. Commits without a release signal do not publish an image. The default `compose.yaml` uses `ghcr.io/desty2k/orange-einvoice-keeper:latest`; use a `vX.Y.Z` tag in a copied Compose file when you require an immutable deployment version.
