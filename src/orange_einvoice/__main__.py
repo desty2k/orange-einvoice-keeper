@@ -31,14 +31,14 @@ def run_once(account: str | None = typer.Argument(None)) -> None:
 
 
 @app.command()
-def bootstrap(account: str, otp: str | None = typer.Option(None, help="One-time code; omit to enter it interactively")) -> None:
-    """Run an interactive profile bootstrap; the OTP is never stored or logged."""
+def bootstrap(
+    account: str,
+    otp: str | None = typer.Option(None, help="One-time code; omit to enter it interactively"),
+) -> None:
+    """Run interactive bootstrap; the terminal prompt keeps the active browser page open."""
     configure_logging()
-    result = asyncio.run(Application(settings()).bootstrap(account, otp))
-    if result.status.value == "otp_required" and otp is None:
-        code = getpass.getpass("Orange OTP (empty to leave pending): ").strip()
-        if code:
-            result = asyncio.run(Application(settings()).bootstrap(account, code))
+    prompt_otp = None if otp is not None else lambda: getpass.getpass("Orange OTP (empty to leave pending): ")
+    result = asyncio.run(Application(settings()).bootstrap(account, otp, prompt_otp))
     typer.echo(f"{account}: {result.status.value}")
 
 

@@ -28,7 +28,7 @@ docker compose run --rm -it orange-einvoice bootstrap home
 # Once Orange asks for OTP, the CLI prompts without echoing or persisting the code.
 ```
 
-`bootstrap` initially attempts normal sign-in. If OTP is detected, it prompts and re-runs using the same persistent account profile. `run-once [ACCOUNT]` is useful to validate a profile. The normal `run` command reconciles config/state at startup, processes overdue/new accounts, then uses interruptible sleeps until the earliest durable `next_attempt_at`.
+`bootstrap` initially attempts normal sign-in. If OTP is detected, it prompts and submits the code on that same live Playwright page and browser context—without a login-page reload. `run-once [ACCOUNT]` is useful to validate a profile. The normal `run` command reconciles config/state at startup, processes overdue/new accounts, then uses interruptible sleeps until the earliest durable `next_attempt_at`.
 
 ## Configuration
 

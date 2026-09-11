@@ -21,18 +21,34 @@ class OrangeClient:
     async def ensure_login(
         self, page: Page, account: AccountSettings, otp: str | None = None
     ) -> LoginResult:
+        """Navigate once and either authenticate or identify an OTP challenge."""
         try:
             await page.goto(self.settings.login_url, wait_until="domcontentloaded")
             result = await self._classify(page)
             if result.status is LoginStatus.SUCCESS:
                 return result
             if result.status is LoginStatus.OTP_REQUIRED:
-                return await self._submit_otp(page, otp)
+                return await self.submit_otp(page, otp) if otp else result
             return await self._submit_credentials(page, account)
         except PlaywrightTimeoutError:
             return LoginResult(LoginStatus.TEMPORARY_FAILURE, detail="browser timeout")
         except PlaywrightError as exc:
             return LoginResult(LoginStatus.TEMPORARY_FAILURE, detail=f"browser error: {exc}")
+
+    async def submit_otp(self, page: Page, otp: str | None) -> LoginResult:
+        """Resume the current OTP challenge without navigation or browser-context replacement."""
+        try:
+            if not otp:
+                return LoginResult(LoginStatus.OTP_REQUIRED, detail="OTP required")
+            field = page.locator(selectors.OTP_INPUT).first
+            await field.wait_for(state="visible")
+            await field.fill(otp)
+            await page.locator(selectors.SUBMIT_BUTTON).first.click()
+            return await self._wait_for_otp_resolution(page)
+        except PlaywrightTimeoutError:
+            return LoginResult(LoginStatus.TEMPORARY_FAILURE, detail="OTP submission timed out")
+        except PlaywrightError as exc:
+            return LoginResult(LoginStatus.TEMPORARY_FAILURE, detail=f"OTP browser error: {exc}")
 
     async def _submit_credentials(self, page: Page, account: AccountSettings) -> LoginResult:
         """Use Orange's observed identifier → password sequence, without hard-coded DOM layout."""
@@ -51,20 +67,18 @@ class OrangeClient:
             if await password.is_visible():
                 await password.fill(account.password.get_secret_value())
                 await page.locator(selectors.SUBMIT_BUTTON).first.click()
-                await page.wait_for_timeout(1_000)
-                return await self._classify(page)
+                return await self._wait_for_otp_resolution(page)
             await page.wait_for_timeout(250)
         return LoginResult(LoginStatus.TEMPORARY_FAILURE, detail="password stage did not appear")
 
-    async def _submit_otp(self, page: Page, otp: str | None) -> LoginResult:
-        if not otp:
-            return LoginResult(LoginStatus.OTP_REQUIRED, detail="OTP required")
-        field = page.locator(selectors.OTP_INPUT).first
-        await field.wait_for(state="visible")
-        await field.fill(otp)
-        await page.locator(selectors.SUBMIT_BUTTON).first.click()
-        await page.wait_for_timeout(1_000)
-        return await self._classify(page)
+    async def _wait_for_otp_resolution(self, page: Page) -> LoginResult:
+        """Allow Orange to process a submission instead of assuming a one-second response."""
+        deadline = asyncio.get_running_loop().time() + self.settings.browser_timeout_ms / 1000
+        result = await self._classify(page)
+        while result.status is LoginStatus.OTP_REQUIRED and asyncio.get_running_loop().time() < deadline:
+            await page.wait_for_timeout(250)
+            result = await self._classify(page)
+        return result
 
     async def _classify(self, page: Page) -> LoginResult:
         text = await page.locator("body").inner_text()

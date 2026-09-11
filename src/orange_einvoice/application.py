@@ -4,6 +4,7 @@ import asyncio
 import json
 import logging
 import signal
+from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import Any
 
@@ -61,16 +62,28 @@ class Application:
         finally:
             self.repository.close()
 
-    async def bootstrap(self, account_name: str, otp: str | None = None) -> AccountState:
+    async def bootstrap(
+        self,
+        account_name: str,
+        otp: str | None = None,
+        prompt_otp: Callable[[], str] | None = None,
+    ) -> AccountState:
         self.start()
         try:
-            account = next((item for item in self.settings.accounts if item.name == account_name and item.enabled), None)
+            account = next(
+                (
+                    item
+                    for item in self.settings.accounts
+                    if item.name == account_name and item.enabled
+                ),
+                None,
+            )
             if account is None:
                 raise ValueError(f"unknown or disabled account: {account_name}")
             state = self.repository.get(account.name)
             if state is None:
                 raise RuntimeError(f"missing reconciled state for {account.name}")
-            return await self.runner.process(account, state, otp)
+            return await self.runner.bootstrap(account, state, otp, prompt_otp)
         finally:
             self.repository.close()
 
