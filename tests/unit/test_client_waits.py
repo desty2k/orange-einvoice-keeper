@@ -170,3 +170,18 @@ async def test_trusted_device_uses_exact_visible_text_locator() -> None:
     assert selected is True
     assert page.lookups == [("Zaloguj i dodaj do zaufanych", True)]
     assert page.button.clicked is True
+
+
+class AuthenticatedDashboardPage:
+    url = "https://www.orange.pl/moj-orange/uslugi-stacjonarne"
+
+
+async def test_authenticated_moj_orange_url_is_success_without_dom_read() -> None:
+    settings = Settings(
+        accounts=[AccountSettings(name="home", email="home@example.com", password="secret")]
+    )
+    client = OrangeClient(settings)
+
+    result = await client._classify(AuthenticatedDashboardPage())  # type: ignore[arg-type]  # noqa: SLF001
+
+    assert result.status is LoginStatus.SUCCESS

@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from collections.abc import Awaitable, Callable
+from urllib.parse import urlparse
 
 from playwright.async_api import Error as PlaywrightError
 from playwright.async_api import Page
@@ -206,6 +207,12 @@ class OrangeClient:
         )
 
     async def _classify(self, page: Page, *, timeout_ms: int | None = None) -> LoginResult:
+        parsed_url = urlparse(page.url)
+        if (
+            parsed_url.hostname in {"orange.pl", "www.orange.pl"}
+            and parsed_url.path.startswith("/moj-orange/")
+        ):
+            return LoginResult(LoginStatus.SUCCESS)
         text = await page.locator("body").inner_text(timeout=timeout_ms)
         otp_fields = page.locator(selectors.OTP_INPUT)
         has_otp_input = await otp_fields.count() > 0 and await otp_fields.first.is_visible()
