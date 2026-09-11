@@ -129,3 +129,44 @@ async def test_password_transition_retries_generic_navigation_error_before_succe
 
     assert result.status is LoginStatus.SUCCESS
     assert page.waits == [250]
+
+
+class TextOnlyTrustedButton:
+    first: TextOnlyTrustedButton
+
+    def __init__(self) -> None:
+        self.first = self
+        self.clicked = False
+
+    async def count(self) -> int:
+        return 1
+
+    async def is_visible(self) -> bool:
+        return True
+
+    async def click(self) -> None:
+        self.clicked = True
+
+
+class TextOnlyTrustedPage:
+    def __init__(self) -> None:
+        self.button = TextOnlyTrustedButton()
+        self.lookups: list[tuple[str, bool]] = []
+
+    def get_by_text(self, text: str, *, exact: bool) -> TextOnlyTrustedButton:
+        self.lookups.append((text, exact))
+        return self.button
+
+
+async def test_trusted_device_uses_exact_visible_text_locator() -> None:
+    settings = Settings(
+        accounts=[AccountSettings(name="home", email="home@example.com", password="secret")]
+    )
+    client = OrangeClient(settings)
+    page = TextOnlyTrustedPage()
+
+    selected = await client._approve_trusted_device(page)  # noqa: SLF001
+
+    assert selected is True
+    assert page.lookups == [("Zaloguj i dodaj do zaufanych", True)]
+    assert page.button.clicked is True

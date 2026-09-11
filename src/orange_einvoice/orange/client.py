@@ -147,7 +147,7 @@ class OrangeClient:
 
     async def _approve_trusted_device(self, page: Page) -> bool:
         """Accept Orange's primary trusted-device option when it follows a valid OTP."""
-        button = page.get_by_role("button", name=selectors.TRUST_DEVICE_BUTTON, exact=True)
+        button = page.get_by_text(selectors.TRUST_DEVICE_BUTTON, exact=True)
         if await button.count() == 0 or not await button.first.is_visible():
             return False
         logger.info("orange_trusted_device_option_detected")
