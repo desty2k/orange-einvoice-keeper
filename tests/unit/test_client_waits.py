@@ -102,3 +102,14 @@ async def test_otp_transition_selects_trusted_device_before_success() -> None:
     assert result.status is LoginStatus.SUCCESS
     assert client.trusted_device_checks == 1
     assert page.waits == [250]
+
+
+async def test_password_transition_selects_trusted_device_before_success() -> None:
+    client = TrustedDeviceClient([LoginResult(LoginStatus.SUCCESS)])
+    page = FakePage()
+
+    result = await client._wait_for_login_resolution(page)  # noqa: SLF001
+
+    assert result.status is LoginStatus.SUCCESS
+    assert client.trusted_device_checks == 1
+    assert page.waits == [250]
