@@ -28,13 +28,13 @@ class Version:
     patch: int
 
     @classmethod
-    def parse(cls, value: str) -> "Version":
+    def parse(cls, value: str) -> Version:
         match = VERSION_PATTERN.fullmatch(value)
         if match is None:
             raise ValueError(f"invalid semantic version: {value}")
         return cls(*(int(part) for part in match.groups()))
 
-    def bump(self, level: str) -> "Version":
+    def bump(self, level: str) -> Version:
         if level == "major":
             return Version(self.major + 1, 0, 0)
         if level == "minor":
