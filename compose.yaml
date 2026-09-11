@@ -1,0 +1,19 @@
+services:
+  orange-einvoice:
+    build: .
+    image: orange-einvoice-keeper:local
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - orange-data:/data
+    # Required on some hosts for Chromium shared-memory usage.
+    shm_size: 1gb
+    healthcheck:
+      test: ["CMD", "orange-einvoice", "status"]
+      interval: 5m
+      timeout: 15s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  orange-data:

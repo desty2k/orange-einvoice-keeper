@@ -1,0 +1,25 @@
+# Secrets and local runtime data
+.env
+.env.*
+!.env.example
+/data/
+state.db
+*.db
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+*.egg-info/
+coverage.xml
+htmlcov/
+
+# Playwright artifacts and editor/OS files
+playwright-report/
+test-results/
+.DS_Store
+.idea/
+.vscode/
