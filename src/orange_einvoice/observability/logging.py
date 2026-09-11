@@ -10,7 +10,7 @@ class JsonFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         payload = {"timestamp": datetime.now(UTC).isoformat(), "level": record.levelname,
                    "event": record.getMessage()}
-        for field in ("account", "outcome", "next_attempt_at", "seconds"):
+        for field in ("account", "outcome", "next_attempt_at", "seconds", "field_count", "waited_ms"):
             if hasattr(record, field):
                 payload[field] = getattr(record, field)
         if record.exc_info:
