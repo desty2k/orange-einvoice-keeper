@@ -185,3 +185,18 @@ async def test_authenticated_moj_orange_url_is_success_without_dom_read() -> Non
     result = await client._classify(AuthenticatedDashboardPage())  # type: ignore[arg-type]  # noqa: SLF001
 
     assert result.status is LoginStatus.SUCCESS
+
+
+class AuthenticatedDashboardRootPage:
+    url = "https://www.orange.pl/moj-orange"
+
+
+async def test_authenticated_moj_orange_root_url_is_success_without_dom_read() -> None:
+    settings = Settings(
+        accounts=[AccountSettings(name="home", email="home@example.com", password="secret")]
+    )
+    client = OrangeClient(settings)
+
+    result = await client._classify(AuthenticatedDashboardRootPage())  # type: ignore[arg-type]  # noqa: SLF001
+
+    assert result.status is LoginStatus.SUCCESS

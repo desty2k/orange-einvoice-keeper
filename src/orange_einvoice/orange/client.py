@@ -210,7 +210,10 @@ class OrangeClient:
         parsed_url = urlparse(page.url)
         if (
             parsed_url.hostname in {"orange.pl", "www.orange.pl"}
-            and parsed_url.path.startswith("/moj-orange/")
+            and (
+                parsed_url.path == "/moj-orange"
+                or parsed_url.path.startswith("/moj-orange/")
+            )
         ):
             return LoginResult(LoginStatus.SUCCESS)
         text = await page.locator("body").inner_text(timeout=timeout_ms)
