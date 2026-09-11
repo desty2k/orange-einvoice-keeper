@@ -67,3 +67,7 @@ pytest
 ```
 
 The tests cover parsing, configuration, durable reconciliation, scheduling, and state transitions without calling Orange or launching Chromium. Real account logins must never run in CI.
+
+## Container releases
+
+GitHub Actions publishes `ghcr.io/desty2k/orange-einvoice-keeper` from `main` when commits since the latest `vX.Y.Z` tag follow Conventional Commits: `feat` creates a minor release, `fix` or `perf` a patch release, and `type!` or `BREAKING CHANGE:` a major release. Each release publishes immutable `vX.Y.Z` plus `X.Y`, `X`, and `latest` image tags, then creates the matching immutable Git tag. Commits without a release signal do not publish an image.
