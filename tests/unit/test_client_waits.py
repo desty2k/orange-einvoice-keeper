@@ -100,5 +100,5 @@ async def test_otp_transition_selects_trusted_device_before_success() -> None:
     result = await client._wait_for_otp_resolution(page)  # noqa: SLF001
 
     assert result.status is LoginStatus.SUCCESS
-    assert client.trusted_device_checks == 2
+    assert client.trusted_device_checks == 1
     assert page.waits == [250]

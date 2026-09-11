@@ -122,13 +122,22 @@ class OrangeClient:
         )
 
     async def _wait_for_otp_resolution(self, page: Page) -> LoginResult:
-        """Wait through OTP and intermediary screens for a final authentication result."""
+        """Resolve OTP once, choosing the trusted-device action at most once."""
+        trusted_device_selected = False
+
+        async def approve_trusted_device_once(current_page: Page) -> bool:
+            nonlocal trusted_device_selected
+            if trusted_device_selected:
+                return False
+            trusted_device_selected = await self._approve_trusted_device(current_page)
+            return trusted_device_selected
+
         return await self._wait_for_resolution(
             page,
             terminal={LoginStatus.SUCCESS, LoginStatus.INVALID_CREDENTIALS},
             completion_event="orange_otp_resolution_complete",
             transition_event="orange_otp_transition_dom_unavailable",
-            intermediate_action=self._approve_trusted_device,
+            intermediate_action=approve_trusted_device_once,
         )
 
     async def _approve_trusted_device(self, page: Page) -> bool:
