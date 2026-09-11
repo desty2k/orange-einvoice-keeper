@@ -11,7 +11,9 @@ from orange_einvoice.models import AccountState, AccountStatus, LoginResult, Log
 def transition(state: AccountState, result: LoginResult, settings: Settings, now: datetime) -> AccountState:
     """Convert an Orange-domain outcome into durable scheduling state."""
     if result.status is LoginStatus.SUCCESS:
-        scheduled = schedule_for_deadline(result.next_required_login, state.account_name, settings, now)
+        scheduled = schedule_success_attempt(
+            result.next_required_login, state.account_name, settings, now
+        )
         return AccountState(state.account_name, AccountStatus.SUCCESS, now, now, result.next_required_login,
                             scheduled, 0, None, now)
     failures = state.consecutive_failures + 1
@@ -33,7 +35,7 @@ def transition(state: AccountState, result: LoginResult, settings: Settings, now
 def schedule_for_deadline(deadline: date | None, account_name: str, settings: Settings, now: datetime) -> datetime:
     """Compute a deterministic deadline schedule or a conservative success fallback."""
     if deadline is None:
-        return now + timedelta(days=settings.fallback_login_interval_days)
+        return now + timedelta(days=settings.success_check_interval_days)
     zone = ZoneInfo(settings.timezone)
     target = deadline - timedelta(days=settings.login_advance_days)
     seed = hashlib.sha256(account_name.encode()).digest()
@@ -41,3 +43,12 @@ def schedule_for_deadline(deadline: date | None, account_name: str, settings: Se
     local = datetime.combine(target, time(settings.schedule_window_start_hour), tzinfo=zone)
     scheduled = local + timedelta(minutes=offset_minutes)
     return max(scheduled.astimezone(UTC), now + timedelta(minutes=1))
+
+
+def schedule_success_attempt(
+    deadline: date | None, account_name: str, settings: Settings, now: datetime
+) -> datetime:
+    """Schedule weekly verification while never missing an earlier Orange deadline."""
+    weekly_attempt = now + timedelta(days=settings.success_check_interval_days)
+    deadline_attempt = schedule_for_deadline(deadline, account_name, settings, now)
+    return min(weekly_attempt, deadline_attempt)

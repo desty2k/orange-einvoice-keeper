@@ -29,8 +29,10 @@ class Application:
         self.runner = Runner(settings, self.repository, BrowserFactory(settings), OrangeClient(settings), notifier)
 
     def start(self) -> None:
+        now = datetime.now(UTC)
         self.repository.open()
-        self.repository.reconcile(self.settings.accounts, datetime.now(UTC))
+        self.repository.reconcile(self.settings.accounts, now)
+        self.repository.cap_success_schedules(self.settings.success_check_interval_days, now)
 
     def stop(self) -> None:
         self.shutdown_event.set()

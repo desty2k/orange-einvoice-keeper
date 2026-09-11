@@ -5,7 +5,11 @@ from pydantic import ValidationError
 
 from orange_einvoice.config import AccountSettings, Settings
 from orange_einvoice.models import AccountState, AccountStatus, LoginResult, LoginStatus
-from orange_einvoice.state_machine import schedule_for_deadline, transition
+from orange_einvoice.state_machine import (
+    schedule_for_deadline,
+    schedule_success_attempt,
+    transition,
+)
 
 
 def make_settings() -> Settings:
@@ -48,9 +52,18 @@ def test_temporary_errors_backoff_and_cap() -> None:
     assert fourth.next_attempt_at == now + timedelta(hours=24)
 
 
-def test_success_without_orange_deadline_uses_monthly_fallback_not_retry_delay() -> None:
+def test_success_without_orange_deadline_uses_weekly_verification() -> None:
     settings = make_settings()
     now = datetime(2026, 9, 1, tzinfo=UTC)
     result = transition(make_state(), LoginResult(LoginStatus.SUCCESS), settings, now)
     assert result.status is AccountStatus.SUCCESS
-    assert result.next_attempt_at == now + timedelta(days=25)
+    assert result.next_attempt_at == now + timedelta(days=7)
+
+
+def test_success_schedule_is_weekly_when_deadline_is_later() -> None:
+    settings = make_settings()
+    now = datetime(2026, 9, 1, tzinfo=UTC)
+
+    scheduled = schedule_success_attempt(date(2026, 10, 8), "home", settings, now)
+
+    assert scheduled == now + timedelta(days=7)

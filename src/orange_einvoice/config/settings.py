@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     data_dir: Path = Path("/data")
     timezone: str = "Europe/Warsaw"
     login_advance_days: Annotated[int, Field(ge=0, le=60)] = 7
-    fallback_login_interval_days: Annotated[int, Field(ge=1, le=90)] = 25
+    success_check_interval_days: Annotated[int, Field(ge=1, le=90)] = 7
     retry_delay_hours: Annotated[int, Field(ge=1, le=168)] = 6
     otp_retry_delay_hours: Annotated[int, Field(ge=1, le=720)] = 24
     invalid_credentials_retry_delay_hours: Annotated[int, Field(ge=24, le=8760)] = 168

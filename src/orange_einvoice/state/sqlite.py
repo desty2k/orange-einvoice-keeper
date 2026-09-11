@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import sqlite3
 from collections.abc import Iterable
-from datetime import UTC, date, datetime
+from dataclasses import replace
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
 from orange_einvoice.config import AccountSettings
@@ -78,6 +79,18 @@ class SQLiteStateRepository:
                 if row["account_name"] not in configured:
                     self._upsert(row["account_name"], AccountStatus.DISABLED, updated_at=now)
 
+
+    def cap_success_schedules(self, interval_days: int, now: datetime) -> None:
+        """Bring successful accounts forward to the configured periodic verification cadence."""
+        interval = timedelta(days=interval_days)
+        for state in self.all():
+            if state.status is not AccountStatus.SUCCESS or state.last_success_at is None:
+                continue
+            weekly_attempt = state.last_success_at + interval
+            if state.next_attempt_at is not None and state.next_attempt_at <= weekly_attempt:
+                continue
+            updated = replace(state, next_attempt_at=weekly_attempt, updated_at=now)
+            self.update(updated, "SUCCESS_CHECK_RESCHEDULED")
     def get(self, account_name: str) -> AccountState | None:
         row = self._connection().execute(
             "SELECT * FROM accounts WHERE account_name = ?", (account_name,)
