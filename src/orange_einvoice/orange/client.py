@@ -172,17 +172,17 @@ class OrangeClient:
         transition_logged = False
 
         while loop.time() < deadline:
-            if intermediate_action is not None and await intermediate_action(page):
-                await page.wait_for_timeout(250)
-                continue
-            remaining_ms = max(1, round((deadline - loop.time()) * 1000))
             try:
+                if intermediate_action is not None and await intermediate_action(page):
+                    await page.wait_for_timeout(250)
+                    continue
+                remaining_ms = max(1, round((deadline - loop.time()) * 1000))
                 result = await self._classify(page, timeout_ms=min(1_000, remaining_ms))
                 last_result = result
                 if result.status in terminal:
                     self._log_resolution(completion_event, result, started)
                     return result
-            except PlaywrightTimeoutError:
+            except PlaywrightError:
                 if not transition_logged:
                     logger.info(transition_event)
                     transition_logged = True

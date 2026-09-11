@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from playwright.async_api import Error as PlaywrightError
 from playwright.async_api import TimeoutError as PlaywrightTimeoutError
 
 from orange_einvoice.config import AccountSettings, Settings
@@ -112,4 +113,19 @@ async def test_password_transition_selects_trusted_device_before_success() -> No
 
     assert result.status is LoginStatus.SUCCESS
     assert client.trusted_device_checks == 1
+    assert page.waits == [250]
+
+
+async def test_password_transition_retries_generic_navigation_error_before_success() -> None:
+    client = SequencedClient(
+        [
+            PlaywrightError("execution context was destroyed"),
+            LoginResult(LoginStatus.SUCCESS),
+        ]
+    )
+    page = FakePage()
+
+    result = await client._wait_for_login_resolution(page)  # noqa: SLF001
+
+    assert result.status is LoginStatus.SUCCESS
     assert page.waits == [250]
